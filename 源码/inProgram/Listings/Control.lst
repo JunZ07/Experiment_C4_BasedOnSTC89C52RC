@@ -1,0 +1,232 @@
+C51 COMPILER V9.54   CONTROL                                                               08/22/2022 12:26:00 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE CONTROL
+OBJECT MODULE PLACED IN .\Objects\Control.obj
+COMPILER INVOKED BY: D:\Keil5\C51\BIN\C51.EXE Control.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\Con
+                    -trol.lst) OBJECT(.\Objects\Control.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include <INTRINS.H>
+   3          
+   4          #include "DS1302.h"             //RTC模块
+   5          #include "LCD1602.h"    //液晶显示屏模块
+   6          #include "IR.h"                 //红外模块
+   7          #include "MatrixKey.h"  //矩阵键盘模块
+   8          #include "Timer0.h"             //定时器0
+   9          #include "Control.h"    //控制器声明
+  10          #include "Delay.h"              //时延函数模块
+  11          #include "BreathLED.h"  //LED灯模块
+  12          
+  13          unsigned long inPassWord;       //输入的密码
+  14          unsigned char inPWCount;        //已输入密码位数
+  15          /*
+  16          4个标志位用于显示器的逻辑控制
+  17          isC4RunningFlag C4是否在运行中的标志
+  18          isPWCorrectFlag 确认键按下后密码是否正确的标志
+  19          isPWErrorFlag   确认键按下后密码是否错误的标志
+  20          isC4StopFlag    C4是否在运行中被暂停计时的标志
+  21          */
+  22          unsigned char isC4RunningFlag, isPWCorrectFlag, isPWErrorFlag, isC4StopFlag;
+  23          unsigned char countTime;        //当前计时时间
+  24          
+  25          /**
+  26            * @brief  控制器也是整个系统的初始化
+  27            * @param  无
+  28            * @retval 无
+  29            */
+  30          void systemInit(void)
+  31          {
+  32   1              LCDInit();                                      //液晶显示屏初始化
+  33   1              IRInit();                                       //红外模块初始化，打开红外中断，里面包括计时器1初始化
+  34   1              Timer0Init();                           //计时器0初始化，开始计时
+  35   1              LCDPrintCover();                        //液晶显示屏打印出来C4封面信息
+  36   1              setLEDCycleSpeedMode(0);        //设置LED灯的频率模式 0为初始即不亮
+  37   1      }
+  38          
+  39          /**
+  40            * @brief  按键扫描和逻辑执行，修改标志位
+  41            * @param  无
+  42            * @retval 无
+  43            */
+  44          void scanKeyAndExecute(void)
+  45          {
+  46   1              unsigned char KeyValue = MatrixKey();   //读扫描到的按键值
+  47   1              if (KeyValue) {
+  48   2                      switch(KeyValue) {
+  49   3                              case 1: //数字1
+  50   3                              case 2: //数字2 
+  51   3                              case 3: //数字3
+  52   3                              case 5: //数字4 
+  53   3                              case 6: //数字5 
+  54   3                              case 7: //数字6 
+C51 COMPILER V9.54   CONTROL                                                               08/22/2022 12:26:00 PAGE 2   
+
+  55   3                              case 9: //数字7
+  56   3                              case 10://数字8 
+  57   3                              case 11://数字9 
+  58   3                              case 14://数字0
+  59   3                                      if (inPWCount<PASSWORDLEN) {    //没有输完整密码，则把输入的下一位读到密码里面
+  60   4                                              if (KeyValue>3 && KeyValue<9)KeyValue--;
+  61   4                                              if (KeyValue>8 && KeyValue<14)KeyValue -= 2;
+  62   4                                              if (KeyValue==14)KeyValue=0;
+  63   4                                              inPassWord = inPassWord*10 + KeyValue;          
+  64   4                                              inPWCount++;
+  65   4                                      }
+  66   3                                      break;
+  67   3                              case 4: //确认键
+  68   3                                      if (inPWCount>=PASSWORDLEN) {   //密码已经输入完整
+  69   4                                              if (inPassWord == PASSWORD) {//密码正确置标志位为1
+  70   5                                                      isPWCorrectFlag = 1;
+  71   5                                              }
+  72   4                                              else {
+  73   5                                                      isPWErrorFlag = 1;              //密码错误置标志位为1
+  74   5                                              }
+  75   4                                              inPassWord = 0;                         //清空密码
+  76   4                                              inPWCount = 0;
+  77   4                                      }
+  78   3                                      break;
+  79   3                              case 8: //清空键
+  80   3                                      inPassWord = 0;
+  81   3                                      inPWCount = 0;
+  82   3                                      LCDShowString(2, 1, "XXXXXXX"); //恢复没有密码的显示
+  83   3                                      break;
+  84   3                              default:
+  85   3                                      break;
+  86   3                      }
+  87   2              }
+  88   1      }
+  89          
+  90          /**
+  91            * @brief  红外扫描遥控器按键，逻辑执行，修改标志位
+  92            * @param  无
+  93            * @retval 无
+  94            */
+  95          void scanIRAndExecute(void)
+  96          {
+  97   1              unsigned char KeyValue;
+  98   1              if (IRIsGetDataAndReset()) {            //红外扫描到按键按下
+  99   2                      KeyValue = IRGetIRKeyValue();   //获取遥控器按键值
+ 100   2                      if (KeyValue == IRKEY_POWER) {  //电源键，回到C4初始化状态
+ 101   3                              isC4RunningFlag = 0;
+ 102   3                              isPWCorrectFlag = 0;
+ 103   3                              isPWErrorFlag = 0;
+ 104   3                              isC4StopFlag = 0;
+ 105   3                              inPassWord = 0;
+ 106   3                              inPWCount = 0;
+ 107   3                              LCDPrintCover();                        //显示封面
+ 108   3                      }
+ 109   2                      if (KeyValue == IRKEY_STOP) {   //暂停键
+ 110   3                              if (isC4RunningFlag) {          //C4正在运行置暂停标志为1
+ 111   4                                      isC4StopFlag = ~isC4StopFlag;
+ 112   4                              }
+ 113   3                      }
+ 114   2              }
+ 115   1      }
+ 116          
+C51 COMPILER V9.54   CONTROL                                                               08/22/2022 12:26:00 PAGE 3   
+
+ 117          /**
+ 118            * @brief  计时器倒计时并修改LED灯频率
+ 119            * @param  无
+ 120            * @retval 无
+ 121            */
+ 122          void countDown(void)
+ 123          {
+ 124   1              if (isC4RunningFlag) {                                  //C4运行中
+ 125   2                      if (isC4StopFlag) {                                     //被遥控器暂停，则刷新RTC时间为暂停之前的时间
+ 126   3                              RTCSetSecond(countTime);                
+ 127   3                      }
+ 128   2                      else {
+ 129   3                              countTime = RTCReadSecond();    //没有暂停，则实时更新倒计时时间，从RTC读取
+ 130   3                      }
+ 131   2              }
+ 132   1              else {                                                                  //没有运行，倒计时记0，RTC秒数清空
+ 133   2                      countTime = 0;
+ 134   2                      RTCSecondClear();
+ 135   2              }
+ 136   1              
+ 137   1              //根据倒计时剩余时间调节LED灯亮灭的频率
+ 138   1              if (COUNTDOWN-countTime>=30 || isC4StopFlag)
+ 139   1                      setLEDCycleSpeedMode(0);
+ 140   1              if (COUNTDOWN-countTime>30 && COUNTDOWN-countTime<45)
+ 141   1                      setLEDCycleSpeedMode(1);
+ 142   1              if (COUNTDOWN-countTime>20 && COUNTDOWN-countTime<=30)
+ 143   1                      setLEDCycleSpeedMode(2);
+ 144   1              if (COUNTDOWN-countTime>10 && COUNTDOWN-countTime<=20)
+ 145   1                      setLEDCycleSpeedMode(3);
+ 146   1              if (COUNTDOWN-countTime>3 && COUNTDOWN-countTime<=10)
+ 147   1                      setLEDCycleSpeedMode(4);
+ 148   1              if (COUNTDOWN-countTime>0 && COUNTDOWN-countTime<=3)
+ 149   1                      setLEDCycleSpeedMode(5);
+ 150   1      }
+ 151          
+ 152          /**
+ 153            * @brief  显示屏根据标志位显示
+ 154            * @param  无
+ 155            * @retval 无
+ 156            */
+ 157          void show()
+ 158          {
+ 159   1              //C4正在运行
+ 160   1              if (isC4RunningFlag) {
+ 161   2                      if (countTime >= COUNTDOWN) {           //倒计时结束，进入卡死状态
+ 162   3                              LCDPrintLine();
+ 163   3                              while(1);
+ 164   3                      }
+ 165   2                      if (isPWCorrectFlag) {                          //密码输入正确，停止C4
+ 166   3                              LCDPrintLine();
+ 167   3                              Delay(2000);
+ 168   3                              LCDPrintCover();
+ 169   3                              isC4RunningFlag = ~isC4RunningFlag;
+ 170   3                              isPWCorrectFlag = 0;
+ 171   3                              return;
+ 172   3                      }
+ 173   2                      if (isPWErrorFlag) {                            //密码输入错误，提示错误
+ 174   3                              LCDPrintError();
+ 175   3                              isPWErrorFlag = 0;
+ 176   3                      }
+ 177   2                      LCDPrintCountDown(COUNTDOWN-countTime);         //刷新一次倒计时
+ 178   2                      if (inPWCount!=0)                                                       //当前正在输入密码，显示已输入部分
+C51 COMPILER V9.54   CONTROL                                                               08/22/2022 12:26:00 PAGE 4   
+
+ 179   2                              LCDShowInPW(2, 1, inPassWord, inPWCount);
+ 180   2              }
+ 181   1              
+ 182   1              //C4不运行
+ 183   1              else {
+ 184   2                      if (isPWCorrectFlag) {                          //密码输入正确，运行C4
+ 185   3                              LCDPrintPlanted();
+ 186   3                              Delay(2000);
+ 187   3                              LCDPrintCountDown(COUNTDOWN-countTime);
+ 188   3                              LCDShowClean(2);
+ 189   3                              isC4RunningFlag = ~isC4RunningFlag;
+ 190   3                              isPWCorrectFlag = 0;
+ 191   3                      }
+ 192   2                      if (isPWErrorFlag) {                            //密码输入错误，提示错误
+ 193   3                              LCDPrintError();
+ 194   3                              Delay(1000);
+ 195   3                              isPWErrorFlag = 0;
+ 196   3                      }
+ 197   2                      if (inPWCount!=0)                                       //当前正在输入密码，显示已输入部分
+ 198   2                              LCDShowInPW(2, 1, inPassWord, inPWCount);
+ 199   2                      else                                                            //没有输入密码封面覆盖
+ 200   2                              LCDPrintCover();
+ 201   2              }
+ 202   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    577    ----
+   CONSTANT SIZE    =      8    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     10       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

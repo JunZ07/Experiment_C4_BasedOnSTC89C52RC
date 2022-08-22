@@ -1,0 +1,180 @@
+C51 COMPILER V9.54   IR                                                                    08/22/2022 12:06:07 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE IR
+OBJECT MODULE PLACED IN .\Objects\IR.obj
+COMPILER INVOKED BY: D:\Keil5\C51\BIN\C51.EXE IR.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\IR.lst) 
+                    -OBJECT(.\Objects\IR.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include "Timer1.h"
+   3          
+   4          unsigned char IRRepeatFlag, IRRecDataFlag;              //连续按住标志，获得按键值标志
+   5          unsigned char IRAddress, IRKeyValue;                    //红外发出设备地址，按键值
+   6          unsigned char IRDataGroup[4], IRDataBitCount;   //红外接收中通过NEC收到的数据组，收到的数据位位数
+   7          unsigned int IRInterval;                                                //两次高电平的间隔时间，用于判断是什么指令
+   8          unsigned char IRNowState;                                               //状态机标志，0-未开始，1-接收到头部，2-接受数据
+   9          
+  10          /**
+  11            * @brief  外部中断1打开，设高优先级
+  12            * @param  无
+  13            * @retval 无
+  14            */
+  15          void INT0Init()
+  16          {
+  17   1              EA = 1;
+  18   1              EX0 = 1;
+  19   1              IT0 = 1;
+  20   1              PX0 = 1;
+  21   1              IE0 = 0;
+  22   1      }
+  23          
+  24          /**
+  25            * @brief  IR红外接收模块初始化，初始化定时器1，初始化外部中断
+  26            * @param  无
+  27            * @retval 无
+  28            */
+  29          void IRInit()
+  30          {
+  31   1              INT0Init();
+  32   1              Timer1Init();
+  33   1      }
+  34          
+  35          /**
+  36            * @brief  获取是否收到数据标志并清空
+  37            * @param  无
+  38            * @retval 获得了数据返回1，否则0
+  39            */
+  40          unsigned char IRIsGetDataAndReset()
+  41          {
+  42   1              if (IRRecDataFlag) {
+  43   2                      IRRecDataFlag = 0;
+  44   2                      return 1;
+  45   2              }
+  46   1              else 
+  47   1                      return 0;
+  48   1      }
+  49          
+  50          /**
+  51            * @brief  获取是否接收到连按标志并清空
+  52            * @param  无
+  53            * @retval 收到repeat信号则返回1，否则0
+  54            */
+C51 COMPILER V9.54   IR                                                                    08/22/2022 12:06:07 PAGE 2   
+
+  55          unsigned char IRIsRepeatDataAndReset()
+  56          {
+  57   1              if (IRRepeatFlag) {
+  58   2                      IRRepeatFlag = 0;
+  59   2                      return 1;
+  60   2              }
+  61   1              else 
+  62   1                      return 0;
+  63   1      }
+  64          
+  65          /**
+  66            * @brief  获取发出设备地址
+  67            * @param  无
+  68            * @retval 返回发出设备地址
+  69            */
+  70          unsigned char IRGetIRAddress()
+  71          {
+  72   1              return IRAddress;
+  73   1      }
+  74          
+  75          /**
+  76            * @brief  获取发出设备按键值
+  77            * @param  无
+  78            * @retval 返回发出设备按键值
+  79            */
+  80          unsigned char IRGetIRKeyValue()
+  81          {
+  82   1              return IRKeyValue;
+  83   1      }
+  84          
+  85          /**
+  86            * @brief  外部中断函数，中断号0，扫描红外接收头收到的信号，低电平有效
+  87            * @param  无
+  88            * @retval 无
+  89            */
+  90          void INT0Routine() interrupt 0
+  91          {
+  92   1              //状态0，没有收到开始或者重复的信号，第一次低电平进入中断，定时器开始计时，并进入状态1
+  93   1              if (IRNowState == 0)
+  94   1              {
+  95   2                      Timer1SetCount(0);
+  96   2                      Timer1Run(1);
+  97   2                      IRNowState = 1;
+  98   2              }
+  99   1              
+ 100   1              //状态1，已经开始接受信号，判断信号是开始还是重复
+ 101   1              else if (IRNowState == 1)
+ 102   1              {
+ 103   2                      IRInterval = Timer1GetCount();  //获取和上次低电平间隙时间，即信号的时长
+ 104   2                      Timer1SetCount(0);                              //获取后定时器重新开始计时
+ 105   2                      if (IRInterval>12442-500 && IRInterval<12442+500) {                     //开始信号，进入状态2
+ 106   3                              IRNowState = 2;
+ 107   3                      }
+ 108   2                      else if (IRInterval>10368-500 && IRInterval<10368+500) {        //repeat重复信号，回到状态1，repeat期间没有低电
+             -平
+ 109   3                              IRNowState = 0;
+ 110   3                              IRRepeatFlag = 1;
+ 111   3                              Timer1Run(0);
+ 112   3                              Timer1SetCount(0);
+ 113   3                      }
+ 114   2                      else {                                                                                                          //错误的信号长度，继续等待
+ 115   3                              IRNowState = 1;
+C51 COMPILER V9.54   IR                                                                    08/22/2022 12:06:07 PAGE 3   
+
+ 116   3                      }
+ 117   2              }
+ 118   1              
+ 119   1              //状态2，收到了开始信号，开始接收4字节数据，接收完整回到状态1
+ 120   1              else if (IRNowState == 2)
+ 121   1              {
+ 122   2                      IRInterval = Timer1GetCount();
+ 123   2                      Timer1SetCount(0);
+ 124   2                      if (IRInterval>1032-500 && IRInterval<1032+500) {                                       //信号0，数据数组写入0
+ 125   3                              IRDataGroup[IRDataBitCount/8] &= ~(0x01 << IRDataBitCount%8);
+ 126   3                              IRDataBitCount++;
+ 127   3                      }
+ 128   2                      else if (IRInterval>2074-500 && IRInterval<2074+500) {                          //信号1，数据数组写入0
+ 129   3                              IRDataGroup[IRDataBitCount/8] |= (0x01 << IRDataBitCount%8);
+ 130   3                              IRDataBitCount++;
+ 131   3                      }
+ 132   2                      else {                                                                                                                          //错误信号，接收数据出错，回到状态1重新等待
+ 133   3                              IRDataBitCount = 0;
+ 134   3                              IRNowState = 1;
+ 135   3                      }
+ 136   2                              
+ 137   2                      //4字节数据全部读取完整，回到状态0
+ 138   2                      if (IRDataBitCount >= 32) {
+ 139   3                              //4字节数据前两字节为地址和地址的反，后两字节为码值和反，要验证一下接收无差错
+ 140   3                              if (IRDataGroup[0]==~IRDataGroup[1] && IRDataGroup[2]==~IRDataGroup[3]) {
+ 141   4                                      IRRecDataFlag = 1;                              //更新标志位说明收到了数据一次，并更新数据值
+ 142   4                                      IRAddress = IRDataGroup[0];     
+ 143   4                                      IRKeyValue = IRDataGroup[2];
+ 144   4                              }
+ 145   3                              IRDataBitCount = 0;
+ 146   3                              IRNowState = 0;
+ 147   3                              Timer1Run(0);
+ 148   3                              Timer1SetCount(0);
+ 149   3                      }
+ 150   2              }
+ 151   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    390    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     12    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

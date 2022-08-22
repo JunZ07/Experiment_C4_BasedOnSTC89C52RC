@@ -1,0 +1,14 @@
+".\Objects\main.obj",
+".\Objects\Control.obj",
+".\Objects\DS1302.obj",
+".\Objects\IR.obj",
+".\Objects\LCD1602.obj",
+".\Objects\MatrixKey.obj",
+".\Objects\Timer0.obj",
+".\Objects\Timer1.obj",
+".\Objects\Delay.obj",
+".\Objects\Buzzer.obj",
+".\Objects\BreathLED.obj" 
+TO ".\Objects\Project" 
+PRINT(".\Listings\Project.m51") RAMSIZE(256) 
+DISABLEWARNING (16) 

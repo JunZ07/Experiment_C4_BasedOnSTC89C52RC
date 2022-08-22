@@ -1,0 +1,119 @@
+C51 COMPILER V9.54   DS1302                                                                08/22/2022 11:30:41 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE DS1302
+OBJECT MODULE PLACED IN .\Objects\DS1302.obj
+COMPILER INVOKED BY: D:\Keil5\C51\BIN\C51.EXE DS1302.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\DS13
+                    -02.lst) OBJECT(.\Objects\DS1302.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          
+   3          sbit RTC_CE = P3^5;             //使能端
+   4          sbit RTC_IO = P3^4;             //数据端
+   5          sbit RTC_SCLK = P3^6;   //时钟脉冲端
+   6          
+   7          /**
+   8            * @brief  向RTC实时时钟写入1字节数据
+   9            * @param  command 1字节命令字
+  10            * @param  dataByte 1字节数据
+  11            * @retval 
+  12            */
+  13          void RTCWriteByte(unsigned char command, dataByte)
+  14          {
+  15   1              unsigned char i;
+  16   1              
+  17   1              RTC_CE = 1;
+  18   1              RTC_IO = 0;
+  19   1              RTC_SCLK = 0;
+  20   1              
+  21   1              for (i=0; i<8; i++) {
+  22   2                      RTC_IO = command & (0x01<<i);
+  23   2                      RTC_SCLK = 1;
+  24   2                      RTC_SCLK = 0;
+  25   2              }
+  26   1              for (i=0; i<8; i++) {
+  27   2                      RTC_IO = dataByte & (0x01<<i);
+  28   2                      RTC_SCLK = 1;
+  29   2                      RTC_SCLK = 0;
+  30   2              }
+  31   1              
+  32   1              RTC_CE = 0;
+  33   1      }
+  34          
+  35          /**
+  36            * @brief  向RTC实时时钟读出1字节数据
+  37            * @param  command 1字节命令字
+  38            * @retval 1字节数据
+  39            */
+  40          unsigned char RTCReadByte(unsigned char command)
+  41          {
+  42   1              unsigned char dataByte = 0x00, i;
+  43   1              
+  44   1              RTC_CE = 1;
+  45   1              RTC_IO = 0;
+  46   1              RTC_SCLK = 0;
+  47   1              
+  48   1              for (i=0; i<8; i++) {
+  49   2                      RTC_IO = command & (0x01<<i);
+  50   2                      RTC_SCLK = 0;
+  51   2                      RTC_SCLK = 1;
+  52   2              }for (i=0; i<8; i++) {
+  53   2                      RTC_SCLK = 1;
+  54   2                      RTC_SCLK = 0;
+C51 COMPILER V9.54   DS1302                                                                08/22/2022 11:30:41 PAGE 2   
+
+  55   2                      if (RTC_IO) dataByte |= (0x01<<i);
+  56   2              }
+  57   1              
+  58   1              RTC_CE = 0;
+  59   1              return dataByte;
+  60   1      }
+  61          
+  62          /**
+  63            * @brief  清空RTC秒数
+  64            * @param  无
+  65            * @retval 无
+  66            */
+  67          void RTCSecondClear(void)
+  68          {
+  69   1              RTCWriteByte(0x80, 0x00);
+  70   1      }
+  71          
+  72          /**
+  73            * @brief  读取RTC秒数
+  74            * @param  无
+  75            * @retval 秒数
+  76            */
+  77          unsigned char RTCReadSecond(void)
+  78          {
+  79   1              unsigned char second = RTCReadByte(0x81);
+  80   1              second = second/16*10 + second%16;
+  81   1              return second;
+  82   1      }
+  83          
+  84          /**
+  85            * @brief  修改RTC秒数
+  86            * @param  second 秒数
+  87            * @retval 无
+  88            */
+  89          void RTCSetSecond(unsigned char second)
+  90          {
+  91   1              second = second/10*16 + second%10;
+  92   1              RTCWriteByte(0x80, second);
+  93   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    221    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       2
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

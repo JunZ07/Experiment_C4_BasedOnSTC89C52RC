@@ -1,0 +1,32 @@
+C51 COMPILER V9.54   BUZZER                                                                08/14/2022 20:28:17 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE BUZZER
+OBJECT MODULE PLACED IN .\Objects\Buzzer.obj
+COMPILER INVOKED BY: D:\Keil5\C51\BIN\C51.EXE Buzzer.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\Buzz
+                    -er.lst) OBJECT(.\Objects\Buzzer.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          
+   3          sbit BZ_BEEP = P2^5;
+   4          
+   5          void BuzzerShake(void)
+   6          {
+   7   1              BZ_BEEP = !BZ_BEEP;
+   8   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =      3    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

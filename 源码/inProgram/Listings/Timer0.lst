@@ -1,0 +1,97 @@
+C51 COMPILER V9.54   TIMER0                                                                08/22/2022 12:26:00 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE TIMER0
+OBJECT MODULE PLACED IN .\Objects\Timer0.obj
+COMPILER INVOKED BY: D:\Keil5\C51\BIN\C51.EXE Timer0.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\Time
+                    -r0.lst) OBJECT(.\Objects\Timer0.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include "MatrixKey.h"
+   3          #include "BreathLED.h"
+   4          
+   5          #define T0INIT_TL 0x66                  //设置定时器初始值。1ms记1次
+   6          #define T0INIT_TH 0xFC
+   7          #define MATRIXKEY_COUNTFLAG 10  //可用的按键最大值
+   8          
+   9          unsigned int LEDCycleCount[5] = {0, 3000, 1500, 500, 200};      //存4档LED一个亮灭周期，0不用
+  10          unsigned char LEDCycleSpeedMode;                                                        //频率模式标号
+  11          
+  12          /**
+  13            * @brief  T0初始化，16位，打开中断，初始即开始计时
+  14            * @param  无
+  15            * @retval 无
+  16            */
+  17          void Timer0Init()
+  18          {
+  19   1              TMOD &= 0xF0;
+  20   1              TMOD |= 0x01;
+  21   1              TF0 = 0;
+  22   1              TL0 = T0INIT_TL;
+  23   1              TH0 = T0INIT_TH;
+  24   1              TR0 = 1;
+  25   1              
+  26   1              EA = 1;
+  27   1              ET0 = 1;
+  28   1              PT0 = 0;
+  29   1      }
+  30          
+  31          /**
+  32            * @brief  T0中断函数，包含扫描矩阵键盘和控制LED灯亮灭
+  33            * @param  无
+  34            * @retval 无
+  35            */
+  36          void T0Routine(void) interrupt 1
+  37          {
+  38   1              static unsigned char MatrixKeyCount = 0;                //矩阵键盘扫描计数
+  39   1              static unsigned int LEDCount = 0;                               //LED计数
+  40   1              MatrixKeyCount++;
+  41   1              TL0 = T0INIT_TL;        //重置计数值
+  42   1              TH0 = T0INIT_TH;
+  43   1              
+  44   1              if (MatrixKeyCount >= MATRIXKEY_COUNTFLAG) {    //矩阵键盘计数到了阈值，扫描一次键盘
+  45   2                      MatrixKeyCount = 0;
+  46   2                      MatrixKeyLoop();
+  47   2              }
+  48   1              
+  49   1              if (LEDCycleSpeedMode == 0)                                             //0档不亮
+  50   1                      LEDClose();
+  51   1              else if (LEDCycleSpeedMode == 5)                                //5档常亮
+  52   1                      LEDOpen();
+  53   1              else {                                                                                  //其他档位，按各档位亮灭周期，一半时间亮，一半时间灭，实现闪烁
+  54   2                      LEDCount++;
+C51 COMPILER V9.54   TIMER0                                                                08/22/2022 12:26:00 PAGE 2   
+
+  55   2                      if (LEDCount < LEDCycleCount[LEDCycleSpeedMode]/2)
+  56   2                              LEDOpen();
+  57   2                      else
+  58   2                              LEDClose();
+  59   2                      LEDCount%=LEDCycleCount[LEDCycleSpeedMode];
+  60   2              }       
+  61   1      }
+  62          
+  63          /**
+  64            * @brief  设置LED灯闪烁频率
+  65            * @param  mode 模式标号
+  66            * @retval 无
+  67            */
+  68          void setLEDCycleSpeedMode(unsigned char mode)
+  69          {
+  70   1              LEDCycleSpeedMode = mode;
+  71   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    189    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     14    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

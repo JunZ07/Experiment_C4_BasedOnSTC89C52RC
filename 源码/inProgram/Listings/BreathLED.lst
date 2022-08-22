@@ -1,0 +1,37 @@
+C51 COMPILER V9.54   BREATHLED                                                             08/22/2022 12:26:00 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE BREATHLED
+OBJECT MODULE PLACED IN .\Objects\BreathLED.obj
+COMPILER INVOKED BY: D:\Keil5\C51\BIN\C51.EXE BreathLED.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\B
+                    -reathLED.lst) OBJECT(.\Objects\BreathLED.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          
+   3          #define LED_IO P2
+   4          
+   5          void LEDOpen(void)
+   6          {
+   7   1              LED_IO &= 0xF0; //只控制前4个灯
+   8   1      }
+   9          
+  10          void LEDClose(void)
+  11          {
+  12   1              LED_IO |= 0x0F;
+  13   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =      8    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

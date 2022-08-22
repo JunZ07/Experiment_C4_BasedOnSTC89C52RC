@@ -1,0 +1,272 @@
+C51 COMPILER V9.54   LCD1602                                                               08/22/2022 12:06:07 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE LCD1602
+OBJECT MODULE PLACED IN .\Objects\LCD1602.obj
+COMPILER INVOKED BY: D:\Keil5\C51\BIN\C51.EXE LCD1602.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\LCD
+                    -1602.lst) OBJECT(.\Objects\LCD1602.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          
+   3          sbit LCD_EN = P2^7;             //使能端，1时数据输入
+   4          sbit LCD_RS = P2^6;             //RS控制端，0为命令，1为数据
+   5          sbit LCD_WR = P2^5;             //WR控制端，0为写入，1为读出
+   6          
+   7          #define LCD_DATAIO P0   //数据IO，8位
+   8          #define INPASSWORDLEN 7 //密码长度
+   9          
+  10          /**
+  11            * @brief  延迟1ms，晶振脉冲11.0592MHz，用于防止电平切换过快出错
+  12            * @param  
+  13            * @retval 
+  14            */
+  15          void LCDDelay1ms()              //@11.0592MHz
+  16          {
+  17   1              unsigned char i, j;
+  18   1              i = 2;
+  19   1              j = 199;
+  20   1              do
+  21   1              {
+  22   2                      while (--j);
+  23   2              } while (--i);
+  24   1      }
+  25          
+  26          /**
+  27            * @brief  写一字节命令
+  28            * @param  command 命令
+  29            * @retval 无
+  30            */
+  31          void LCDWriteCommand(unsigned char command)
+  32          {
+  33   1              LCD_RS = 0;
+  34   1              LCD_WR = 0;
+  35   1              LCD_DATAIO = command;
+  36   1              LCD_EN = 1;
+  37   1              LCDDelay1ms();  //虽然LCD_EN变化时间为ns级别，但是指令执行需要40us，这边加这个主要是防指令延时不够，反正测
+             -试能用
+  38   1              LCD_EN = 0;
+  39   1              LCDDelay1ms();
+  40   1      }
+  41          
+  42          /**
+  43            * @brief  写一字节数据
+  44            * @param  data0 数据
+  45            * @retval 无
+  46            */
+  47          void LCDWriteData(unsigned char data0)
+  48          {
+  49   1              LCD_RS = 1;
+  50   1              LCD_WR = 0;
+  51   1              LCD_DATAIO = data0;
+  52   1              LCD_EN = 1;
+  53   1              LCDDelay1ms();
+C51 COMPILER V9.54   LCD1602                                                               08/22/2022 12:06:07 PAGE 2   
+
+  54   1              LCD_EN = 0;
+  55   1              LCDDelay1ms();
+  56   1      }
+  57          
+  58          /**
+  59            * @brief  显示屏初始化，清贫，设置光标，设置写保护等等
+  60            * @param  无
+  61            * @retval 无
+  62            */
+  63          void LCDInit(void)
+  64          {
+  65   1              LCDWriteCommand(0x38);
+  66   1              LCDWriteCommand(0x0C);
+  67   1              LCDWriteCommand(0x06);
+  68   1              LCDWriteCommand(0x01);
+  69   1      }
+  70          
+  71          void LCDShowString(unsigned char Line,unsigned char Column,unsigned char *String);
+  72          /**
+  73            * @brief  清空显示屏某行
+  74            * @param  line 行数 1-第一行 2-第二行 3-两行
+  75            * @retval 无
+  76            */
+  77          void LCDShowClean(unsigned char line)
+  78          {
+  79   1              if (line == 1)
+  80   1                      LCDShowString(1, 1, "                ");
+  81   1              else if (line == 2)
+  82   1                      LCDShowString(2, 1, "                ");
+  83   1              else {
+  84   2                      LCDShowString(1, 1, "                ");
+  85   2                      LCDShowString(2, 1, "                ");
+  86   2              }
+  87   1      }
+  88          
+  89          /**
+  90            * @brief  设置光标位置
+  91            * @param  line 行数 1或2
+  92            * @param  column 列数 1~14
+  93            * @retval 无
+  94            */
+  95          void LCDSetCursor(unsigned char line, unsigned char column)
+  96          {
+  97   1              if (line == 1)  //address 00H~27H
+  98   1                      LCDWriteCommand(0x80 + column - 1);
+  99   1              else    //address 40H~67H
+ 100   1                      LCDWriteCommand(0x80 + column + 40 - 1);
+ 101   1      }
+ 102          
+ 103          /**
+ 104            * @brief  显示一个字符
+ 105            * @param  line 行数 1或2
+ 106            * @param  column 列数 1~14
+ 107            * @param  char0 字符
+ 108            * @retval 无
+ 109            */
+ 110          void LCDShowChar(unsigned char line, unsigned char column, unsigned char char0)
+ 111          {
+ 112   1              LCDSetCursor(line, column);
+ 113   1              LCDWriteData(char0);
+ 114   1      }
+ 115          
+C51 COMPILER V9.54   LCD1602                                                               08/22/2022 12:06:07 PAGE 3   
+
+ 116          /**
+ 117            * @brief  显示一个字符串
+ 118            * @param  line 行数 1或2
+ 119            * @param  column 列数 1~14
+ 120            * @param  String 字符指针，字符串的首地址
+ 121            * @retval 无
+ 122            */
+ 123          void LCDShowString(unsigned char Line,unsigned char Column,unsigned char *String)
+ 124          {
+ 125   1              unsigned char i;
+ 126   1              LCDSetCursor(Line,Column);
+ 127   1              for(i=0;String[i]!='\0';i++)    //一直写到字符串结尾
+ 128   1                      LCDWriteData(String[i]);
+ 129   1      }
+ 130          
+ 131          /**
+ 132            * @brief  计算X的Y次方
+ 133            * @param  X 底数
+ 134            * @param  Y 指数
+ 135            * @retval 结果 long型
+ 136            */
+ 137          long LCDPow(int X,int Y)
+ 138          {
+ 139   1              unsigned char i;
+ 140   1              long Result=1;
+ 141   1              for(i=0;i<Y;i++)
+ 142   1              {
+ 143   2                      Result*=X;
+ 144   2              }
+ 145   1              return Result;
+ 146   1      }
+ 147          
+ 148          void LCDShowNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length)
+ 149          {
+ 150   1              unsigned char i;
+ 151   1              LCDSetCursor(Line,Column);
+ 152   1              for(i=Length;i>0;i--)   //循环读出num每一位，其中如果读的位数超过num则读出0，并显示
+ 153   1                      LCDWriteData('0'+Number/LCDPow(10,i-1)%10);
+ 154   1      }
+ 155          
+ 156          void LCDShowSignedNum(unsigned char Line,unsigned char Column,int Number,unsigned char Length)
+ 157          {
+ 158   1              unsigned char i;
+ 159   1              unsigned int Number1;
+ 160   1              LCDSetCursor(Line,Column);
+ 161   1              if(Number>=0)
+ 162   1              {
+ 163   2                      LCDWriteData('+');
+ 164   2                      Number1=Number;
+ 165   2              }
+ 166   1              else
+ 167   1              {
+ 168   2                      LCDWriteData('-');
+ 169   2                      Number1=-Number;
+ 170   2              }
+ 171   1              for(i=Length;i>0;i--)
+ 172   1              {
+ 173   2                      LCDWriteData('0'+Number1/LCDPow(10,i-1)%10);
+ 174   2              }
+ 175   1      }
+ 176          
+ 177          void LCDPrintCover(void)
+C51 COMPILER V9.54   LCD1602                                                               08/22/2022 12:06:07 PAGE 4   
+
+ 178          {
+ 179   1              LCDShowString(1, 1, "PASSWORD:       ");
+ 180   1              LCDShowString(2, 1, "XXXXXXX         ");
+ 181   1      }
+ 182          
+ 183          void LCDPrintPlanted(void)
+ 184          {
+ 185   1              LCDShowString(1, 1, "The C4 bomb has ");
+ 186   1              LCDShowString(2, 1, "been planted!   ");
+ 187   1      }
+ 188          
+ 189          void LCDPrintCountDown(unsigned char count)
+ 190          {
+ 191   1              LCDShowString(1, 1, "COUNTDOWN:      ");
+ 192   1              LCDShowNum(1, 11, count, 2);
+ 193   1      }
+ 194          void LCDPrintLine(void)
+ 195          {
+ 196   1              LCDShowString(1, 1, "----------------");
+ 197   1              LCDShowString(2, 1, "----------------");
+ 198   1      }
+ 199          
+ 200          void LCDPrintError(void)
+ 201          {
+ 202   1              LCDShowString(2, 1, "ERROR!          ");
+ 203   1      }
+ 204          
+ 205          void LCD_ShowHexNum(unsigned char Line,unsigned char Column,unsigned int Number,unsigned char Length)
+ 206          {
+ 207   1              unsigned char i,SingleNumber;
+ 208   1              LCDSetCursor(Line,Column);
+ 209   1              for(i=Length;i>0;i--)
+ 210   1              {
+ 211   2                      SingleNumber=Number/LCDPow(16,i-1)%16;
+ 212   2                      if(SingleNumber<10)
+ 213   2                      {
+ 214   3                              LCDWriteData(SingleNumber+'0');
+ 215   3                      }
+ 216   2                      else
+ 217   2                      {
+ 218   3                              LCDWriteData(SingleNumber-10+'A');
+ 219   3                      }
+ 220   2              }
+ 221   1      }
+ 222          
+ 223          /**
+ 224            * @brief  显示出已输入的密码
+ 225            * @param  Line 行数
+ 226            * @param  Column 列数
+ 227            * @param  Number 密码
+ 228            * @param  PWCount 密码当前位数
+ 229            * @retval 无
+ 230            */
+ 231          void LCDShowInPW(unsigned char Line,unsigned char Column,unsigned long Number,unsigned char PWCount)
+ 232          {
+ 233   1              unsigned char i;
+ 234   1              LCDSetCursor(Line,Column);
+ 235   1              for (i=1; i<=INPASSWORDLEN-PWCount; i++)
+ 236   1                      LCDWriteData('X');
+ 237   1              for(i=PWCount; i>0; i--)        //循环读出num每一位，其中如果读的位数超过num则读出0，并显示
+ 238   1                      LCDWriteData('0'+Number/LCDPow(10,i-1)%10);
+ 239   1      }
+C51 COMPILER V9.54   LCD1602                                                               08/22/2022 12:06:07 PAGE 5   
+
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    649    ----
+   CONSTANT SIZE    =    136    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      39
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

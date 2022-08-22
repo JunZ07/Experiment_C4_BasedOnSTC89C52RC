@@ -1,0 +1,107 @@
+C51 COMPILER V9.54   MATRIXKEY                                                             08/22/2022 12:26:00 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MATRIXKEY
+OBJECT MODULE PLACED IN .\Objects\MatrixKey.obj
+COMPILER INVOKED BY: D:\Keil5\C51\BIN\C51.EXE MatrixKey.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\M
+                    -atrixKey.lst) OBJECT(.\Objects\MatrixKey.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          
+   3          //矩阵键盘的IO口 C是列 L是行
+   4          sbit MKEY_C1 = P1^3;
+   5          sbit MKEY_C2 = P1^2;
+   6          sbit MKEY_C3 = P1^1;
+   7          sbit MKEY_C4 = P1^0;
+   8          sbit MKEY_L1 = P1^7;
+   9          sbit MKEY_L2 = P1^6;
+  10          sbit MKEY_L3 = P1^5;
+  11          sbit MKEY_L4 = P1^4;
+  12          #define MKEY_IO P1      //方便全部置0
+  13          
+  14          unsigned char MatrixKeyNum;     //当前扫描到的按键值
+  15          
+  16          /**
+  17            * @brief  扫描矩阵键盘按键的IO口电平状态来得知哪个按键被按下
+  18            * @param  无
+  19            * @retval 被按下的按键值，最后一个有效，单个有效
+  20            */
+  21          unsigned char MatrixKeyGetState()
+  22          {
+  23   1              unsigned char KeyNumber=0;
+  24   1              
+  25   1              MKEY_IO = 0xFF;
+  26   1              MKEY_C1 = 0;
+  27   1              if(MKEY_L1 == 0){KeyNumber=1;}
+  28   1              if(MKEY_L2 == 0){KeyNumber=5;}
+  29   1              if(MKEY_L3 == 0){KeyNumber=9;}
+  30   1              if(MKEY_L4 == 0){KeyNumber=13;}
+  31   1              
+  32   1              MKEY_IO = 0xFF;
+  33   1              MKEY_C2 = 0;
+  34   1              if(MKEY_L1 == 0){KeyNumber=2;}
+  35   1              if(MKEY_L2 == 0){KeyNumber=6;}
+  36   1              if(MKEY_L3 == 0){KeyNumber=10;}
+  37   1              if(MKEY_L4 == 0){KeyNumber=14;}
+  38   1              
+  39   1              MKEY_IO = 0xFF;
+  40   1              MKEY_C3 = 0;
+  41   1              if(MKEY_L1 == 0){KeyNumber=3;}
+  42   1              if(MKEY_L2 == 0){KeyNumber=7;}
+  43   1              if(MKEY_L3 == 0){KeyNumber=11;}
+  44   1              if(MKEY_L4 == 0){KeyNumber=15;}
+  45   1              
+  46   1              MKEY_IO = 0xFF;
+  47   1              MKEY_C4 = 0;
+  48   1              if(MKEY_L1 == 0){KeyNumber=4;}
+  49   1              if(MKEY_L2 == 0){KeyNumber=8;}
+  50   1              if(MKEY_L3 == 0){KeyNumber=12;}
+  51   1              if(MKEY_L4 == 0){KeyNumber=16;}
+  52   1              
+  53   1              return KeyNumber;
+  54   1      }
+C51 COMPILER V9.54   MATRIXKEY                                                             08/22/2022 12:26:00 PAGE 2   
+
+  55          
+  56          /**
+  57            * @brief  提供给定时器定时扫描的按键扫描函数，按下并松开时有效
+  58            * @param  无
+  59            * @retval 无
+  60            */
+  61          void MatrixKeyLoop(void)
+  62          {
+  63   1              static unsigned char lastState, nowState;       //上一次电平状态和这一次
+  64   1              lastState = nowState;
+  65   1              nowState = MatrixKeyGetState();
+  66   1              if (lastState!=0 && nowState==0)                        //上一次电平为低，然后这次为高，则说明被按下并�
+             -�起了
+  67   1                      MatrixKeyNum = lastState;
+  68   1      }
+  69          
+  70          /**
+  71            * @brief  获取矩阵键盘当前扫描到的按键值
+  72            * @param  无
+  73            * @retval 按键值
+  74            */
+  75          unsigned char MatrixKey(void)
+  76          {
+  77   1              unsigned char tempKeyNum = MatrixKeyNum;
+  78   1              MatrixKeyNum = 0;
+  79   1              return tempKeyNum;
+  80   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    128    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      3    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

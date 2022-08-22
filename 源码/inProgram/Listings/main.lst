@@ -1,0 +1,41 @@
+C51 COMPILER V9.54   MAIN                                                                  08/22/2022 11:30:41 PAGE 1   
+
+
+C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Keil5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main.l
+                    -st) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          //程序入口 调用初始化接口一次 循环依次调用红外识别-按键识别-计时器-显示器
+   2          //Control为提供控制接口的控制器
+   3          
+   4          #include "Control.h"
+   5          
+   6          void main()
+   7          {
+   8   1              systemInit();                           //初始化系统，包括定时器，红外中断，显示屏等初始化
+   9   1              
+  10   1              while(1) {
+  11   2                      scanIRAndExecute();             //识别红外按键并执行逻辑
+  12   2                      scanKeyAndExecute();    //识别矩阵键盘按键并执行逻辑
+  13   2                      countDown();                    //实时修改倒计时计数
+  14   2                      show();                                 //根据修改的逻辑显示信息
+  15   2              }
+  16   1              
+  17   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     17    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
